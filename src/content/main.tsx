@@ -2,6 +2,7 @@ import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { createRoot } from "react-dom/client";
 import { FlagControl, type LabelViewStatus } from "./FlagControl";
+import { isToggleKey } from "./shortcuts";
 import type { Label, LabeledShort, LabelRequest, LabelResponse } from "../shared/labels";
 
 const SHORTS_PATH = /^\/shorts\/([A-Za-z0-9_-]+)\/?$/;
@@ -181,18 +182,17 @@ window.addEventListener("popstate", checkCurrentShorts);
 window.addEventListener("yt-navigate-finish", checkCurrentShorts);
 
 window.addEventListener("keydown", (event) => {
-  if (event.key.toLowerCase() !== "z" || event.repeat || event.isComposing || event.defaultPrevented) {
+  if (!isToggleKey(event) || event.defaultPrevented) {
     return;
   }
 
-  const hasModifier = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
   const typingInField = event.composedPath().some((target) => {
     if (!(target instanceof HTMLElement)) {
       return false;
     }
     return target.isContentEditable || target.matches("input, textarea, select");
   });
-  if (hasModifier || typingInField) {
+  if (typingInField) {
     return;
   }
   if (currentVideoId === null || viewStatus !== "ready") {
