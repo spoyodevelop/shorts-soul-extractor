@@ -5,7 +5,7 @@
   "description": "Development scaffold for manually labeling YouTube Shorts.",
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/shorts/*"],
+      "matches": ["https://www.youtube.com/*"],
       "js": ["content.js"]
     }
   ],
