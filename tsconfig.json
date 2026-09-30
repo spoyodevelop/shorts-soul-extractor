@@ -4,11 +4,13 @@
     "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["chrome"],
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

@@ -10,7 +10,7 @@ await mkdir(outdir, { recursive: true });
 await copyFile(resolve(root, "manifest.json"), resolve(outdir, "manifest.json"));
 
 const targets = [
-  { entry: "src/content/main.ts", output: "content", format: "iife" },
+  { entry: "src/content/main.tsx", output: "content", format: "iife" },
   { entry: "src/background/main.ts", output: "background", format: "esm" },
 ];
 
@@ -24,6 +24,8 @@ const contexts = await Promise.all(
       format,
       platform: "browser",
       target: "chrome120",
+      jsx: "automatic",
+      jsxImportSource: "@emotion/react",
       sourcemap: true,
       logLevel: "info",
     }),

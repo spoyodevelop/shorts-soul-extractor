@@ -1,6 +1,6 @@
 # Shorts Flagger
 
-TypeScript 기반 Chrome Manifest V3 익스텐션입니다. 현재는 Shorts URL에서 영상 ID를 식별하고 Flag 버튼으로 임시 입력을 받을 수 있습니다. 단축키·IndexedDB·자막 수집·분석 기능은 아직 구현되지 않았습니다.
+React와 Emotion을 사용하는 TypeScript 기반 Chrome Manifest V3 익스텐션입니다. 현재는 Shorts URL에서 영상 ID를 식별하고 Flag 버튼으로 임시 입력을 받을 수 있습니다. 단축키·IndexedDB·자막 수집·분석 기능은 아직 구현되지 않았습니다.
 
 코드 수정 시에는 [코드 작성 원칙](AGENTS.md)을 따릅니다.
 
@@ -30,7 +30,8 @@ npm run dev
 ## 구조
 
 - `manifest.json`: MV3 설정. YouTube 페이지에 content script를 등록합니다.
-- `src/content/main.ts`: Shorts URL과 화면 전환을 감지하고 Flag 버튼을 표시합니다.
+- `src/content/main.tsx`: Shorts URL과 화면 전환을 감지하고 React UI를 Shadow DOM에 연결합니다.
+- `src/content/FlagControl.tsx`: Emotion으로 스타일을 적용한 Flag 버튼과 임시 입력 상태를 표시합니다.
 - `src/background/main.ts`: 향후 로컬 저장과 후속 작업 큐의 진입점.
 - `scripts/build.mjs`: 확장 프로그램용 번들 생성. 결과물은 `dist/`에 저장됩니다.
 
