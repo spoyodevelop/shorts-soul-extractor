@@ -5,7 +5,7 @@ export type LabelViewStatus = "loading" | "ready" | "saving" | "error";
 
 type FlagControlProps = {
   videoId: string;
-  label: Label | null;
+  label: Label;
   status: LabelViewStatus;
   onToggle: (videoId: string) => void;
   onRetry: (videoId: string) => void;
@@ -21,11 +21,9 @@ export function FlagControl({ videoId, label, status, onToggle, onRetry }: FlagC
     onToggle(videoId);
   }
 
-  let statusText = "현재: 라벨 없음";
+  let statusText = "현재: Unflag";
   if (label === "flag") {
     statusText = "현재: Flag";
-  } else if (label === "unflag") {
-    statusText = "현재: Unflag";
   }
   if (status === "loading") {
     statusText = "Flag 상태 확인 중";

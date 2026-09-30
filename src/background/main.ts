@@ -1,21 +1,5 @@
-import { getLabel, saveLabel } from "./labels";
+import { getLabel, observeShort, toggleLabel } from "./labels";
 import type { LabelRequest, LabelResponse, LabeledShort } from "../shared/labels";
-
-function isLabeledShort(value: unknown): value is LabeledShort {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-
-  const record = value as Record<string, unknown>;
-  const validVideoId =
-    typeof record.videoId === "string" && /^[A-Za-z0-9_-]+$/.test(record.videoId);
-  const validLabel = record.label === "flag" || record.label === "unflag";
-  const validTimestamp =
-    typeof record.labeledAt === "number" &&
-    Number.isSafeInteger(record.labeledAt) &&
-    record.labeledAt > 0;
-  return validVideoId && validLabel && validTimestamp;
-}
 
 function isLabelRequest(value: unknown): value is LabelRequest {
   if (typeof value !== "object" || value === null) {
@@ -23,13 +7,24 @@ function isLabelRequest(value: unknown): value is LabelRequest {
   }
 
   const request = value as Record<string, unknown>;
+  const validVideoId =
+    typeof request.videoId === "string" && /^[A-Za-z0-9_-]+$/.test(request.videoId);
   if (request.type === "labels:get") {
-    const validVideoId =
-      typeof request.videoId === "string" && /^[A-Za-z0-9_-]+$/.test(request.videoId);
     return validVideoId;
   }
-  if (request.type === "labels:save") {
-    return isLabeledShort(request.record);
+  if (request.type === "labels:observe") {
+    const validTimestamp =
+      typeof request.observedAt === "number" &&
+      Number.isSafeInteger(request.observedAt) &&
+      request.observedAt > 0;
+    return validVideoId && validTimestamp;
+  }
+  if (request.type === "labels:toggle") {
+    const validTimestamp =
+      typeof request.labeledAt === "number" &&
+      Number.isSafeInteger(request.labeledAt) &&
+      request.labeledAt > 0;
+    return validVideoId && validTimestamp;
   }
   return false;
 }
@@ -38,7 +33,10 @@ async function handleRequest(request: LabelRequest): Promise<LabeledShort | null
   if (request.type === "labels:get") {
     return getLabel(request.videoId);
   }
-  return saveLabel(request.record);
+  if (request.type === "labels:observe") {
+    return observeShort(request.videoId, request.observedAt);
+  }
+  return toggleLabel(request.videoId, request.labeledAt);
 }
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {

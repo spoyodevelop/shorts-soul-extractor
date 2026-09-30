@@ -1,6 +1,6 @@
 # Shorts Flagger
 
-React와 Emotion을 사용하는 TypeScript 기반 Chrome Manifest V3 익스텐션입니다. 현재는 Shorts URL에서 영상 ID를 식별하고 Flag/Unflag 토글 라벨을 IndexedDB에 저장합니다. 자막 수집·분석 기능은 아직 구현되지 않았습니다.
+React와 Emotion을 사용하는 TypeScript 기반 Chrome Manifest V3 익스텐션입니다. 현재는 Shorts URL에서 영상 ID를 식별하고 기본 Unflag 또는 사용자가 토글한 Flag 상태를 IndexedDB에 저장합니다. 자막 수집·분석 기능은 아직 구현되지 않았습니다.
 
 코드 수정 시에는 [코드 작성 원칙](AGENTS.md)을 따릅니다.
 
@@ -17,7 +17,7 @@ npm install
 npm run check
 ```
 
-Chrome에서 `chrome://extensions`를 열고 **개발자 모드**를 켠 다음 **압축해제된 확장 프로그램을 로드합니다**를 눌러 이 프로젝트의 `dist/` 폴더를 선택하세요. YouTube에서 Shorts를 열면 화면 오른쪽 아래에 Flag 토글 버튼이 나타납니다. 버튼이나 `Z` 키를 누를 때마다 `flag`와 `unflag`가 전환되고, 영상 ID·최종 라벨·입력 시각이 확장 프로그램의 IndexedDB에 저장됩니다. 입력 중인 텍스트 필드에서는 단축키가 작동하지 않습니다. 같은 Shorts로 돌아와도 저장된 라벨을 읽어 표시합니다.
+Chrome에서 `chrome://extensions`를 열고 **개발자 모드**를 켠 다음 **압축해제된 확장 프로그램을 로드합니다**를 눌러 이 프로젝트의 `dist/` 폴더를 선택하세요. YouTube에서 Shorts를 열면 영상 ID가 기본 `unflag`로 저장되고 화면 오른쪽 아래에 Flag 토글 버튼이 나타납니다. 버튼이나 `Z` 키를 누를 때마다 `flag`와 `unflag`가 전환됩니다. 입력 중인 텍스트 필드에서는 단축키가 작동하지 않습니다. 같은 Shorts로 돌아와도 저장된 상태를 유지합니다.
 
 개발 중에는 다음 명령으로 TypeScript 변경 사항을 다시 빌드할 수 있습니다.
 
@@ -39,13 +39,13 @@ npm run dev
 
 ## 만들 기능
 
-사용자가 YouTube Shorts를 보다가 Flag 토글을 누르면 최종 라벨을 먼저 로컬에 저장하고 자막·메타데이터 수집 및 분석은 후속 작업으로 처리하는 MVP를 만듭니다. 시청 시간이나 넘긴 영상처럼 토글을 누르지 않은 행동은 학습 데이터로 사용하지 않습니다.
+사용자가 YouTube Shorts를 보다가 만난 영상 ID를 모읍니다. 각 영상의 기본 라벨은 `unflag`이며, 사용자가 버튼이나 `Z` 키로 `flag`와 `unflag`를 전환할 수 있습니다. 라벨은 두 상태만 사용하고, 영상별 최종 상태를 로컬에 저장합니다. 자막·메타데이터 수집 및 분석은 후속 작업으로 처리합니다.
 
 1. **현재 Shorts 식별 (구현):** `/shorts/:id` 경로와 화면 전환을 감지하고 현재 영상의 `videoId`를 추출합니다.
-2. **명시적 라벨 토글 (구현):** 한 버튼 또는 `Z` 키로 `미라벨 → Flag → Unflag → Flag` 순서로 전환합니다. Unflag도 명시적으로 누른 샘플로 유지합니다.
-3. **즉시 저장 (구현):** 라벨 시점의 `videoId`, 최종 `label`, `labeledAt`을 IndexedDB에 저장합니다. 같은 영상의 라벨을 다시 저장하면 최종 상태가 남으며, 저장 성공 여부를 사용자에게 알려줍니다.
-4. **후속 수집 큐:** 라벨링된 항목에서 transcript와 metadata 수집을 시도합니다. 실패 기록과 재시도 상태를 남겨 라벨이 사라지지 않게 합니다.
-5. **Jev batch:** 서로 다른 명시적 라벨 샘플 10개가 쌓이면 각 영상의 최종 라벨과 함께 전달합니다. transcript가 없어도 유효한 샘플로 유지합니다.
+2. **Flag 토글 (구현):** 처음 만난 영상은 `unflag`입니다. 한 버튼 또는 `Z` 키로 `unflag ↔ flag`를 전환합니다.
+3. **로컬 저장 (구현):** 처음 만난 `videoId`는 기본 `unflag`로 IndexedDB에 저장합니다. 재방문 시 기존 Flag 상태를 덮어쓰지 않고, 토글할 때는 최종 라벨과 변경 시각을 갱신합니다. 최초 관찰 시각 `observedAt`은 따로 유지합니다.
+4. **후속 수집 큐:** 저장된 영상에서 transcript와 metadata 수집을 시도합니다. 실패 기록과 재시도 상태를 남겨 영상 ID와 라벨이 사라지지 않게 합니다.
+5. **Jev batch:** 서로 다른 Shorts ID 10개가 쌓이면 각 영상의 최종 `flag | unflag` 상태와 함께 전달합니다. transcript가 없어도 유효한 샘플로 유지합니다.
 6. **외부 연동 경계:** transcript provider 인터페이스를 두고 `youtubei.js` 등 적절한 라이브러리가 MV3 환경에서 동작하는지 검증한 뒤 연결합니다. Jev 분석과 YouTube의 실제 ‘관심 없음’ 동작은 우선 인터페이스와 mock으로 둡니다.
 
 각 단계는 실제 Chrome에서 동작을 확인한 뒤 다음 단계로 진행합니다. 저장 동작은 자동 검사로 확인했으며, 실제 Chrome에서의 확인은 아직 필요합니다.

@@ -1,6 +1,6 @@
 export type Label = "flag" | "unflag";
 
-export function nextLabel(current: Label | null): Label {
+export function nextLabel(current: Label): Label {
   if (current === "flag") {
     return "unflag";
   }
@@ -10,12 +10,14 @@ export function nextLabel(current: Label | null): Label {
 export type LabeledShort = {
   videoId: string;
   label: Label;
+  observedAt: number;
   labeledAt: number;
 };
 
 export type LabelRequest =
   | { type: "labels:get"; videoId: string }
-  | { type: "labels:save"; record: LabeledShort };
+  | { type: "labels:observe"; videoId: string; observedAt: number }
+  | { type: "labels:toggle"; videoId: string; labeledAt: number };
 
 export type LabelResponse =
   | { ok: true; record: LabeledShort | null }

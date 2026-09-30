@@ -2,7 +2,6 @@ import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { createRoot } from "react-dom/client";
 import { FlagControl, type LabelViewStatus } from "./FlagControl";
-import { nextLabel } from "../shared/labels";
 import type { Label, LabeledShort, LabelRequest, LabelResponse } from "../shared/labels";
 
 const SHORTS_PATH = /^\/shorts\/([A-Za-z0-9_-]+)\/?$/;
@@ -44,7 +43,7 @@ async function sendLabelRequest(request: LabelRequest): Promise<LabeledShort | n
 }
 
 let currentVideoId: string | null = null;
-let currentLabel: Label | null = null;
+let currentLabel: Label = "unflag";
 let viewStatus: LabelViewStatus = "loading";
 let operation = 0;
 let visit = 0;
@@ -78,7 +77,6 @@ async function requestToggle(videoId: string): Promise<void> {
     return;
   }
 
-  const label = nextLabel(currentLabel);
   const currentOperation = ++operation;
   const currentVisit = visit;
   viewStatus = "saving";
@@ -86,8 +84,9 @@ async function requestToggle(videoId: string): Promise<void> {
 
   try {
     const record = await sendLabelRequest({
-      type: "labels:save",
-      record: { videoId, label, labeledAt: Date.now() },
+      type: "labels:toggle",
+      videoId,
+      labeledAt: Date.now(),
     });
     if (record === null) {
       throw new Error("Label storage returned no record");
@@ -119,17 +118,28 @@ function retryLoadLabel(videoId: string): void {
   const currentOperation = ++operation;
   viewStatus = "loading";
   renderFlagControl();
-  void loadLabel(videoId, visit, currentOperation);
+  void observeCurrentShort(videoId, visit, currentOperation);
 }
 
-async function loadLabel(videoId: string, currentVisit: number, currentOperation: number): Promise<void> {
+async function observeCurrentShort(
+  videoId: string,
+  currentVisit: number,
+  currentOperation: number,
+): Promise<void> {
   try {
-    const record = await sendLabelRequest({ type: "labels:get", videoId });
+    const record = await sendLabelRequest({
+      type: "labels:observe",
+      videoId,
+      observedAt: Date.now(),
+    });
+    if (record === null) {
+      throw new Error("Short observation returned no record");
+    }
     if (currentVisit !== visit || currentOperation !== operation) {
       return;
     }
 
-    currentLabel = record?.label ?? null;
+    currentLabel = record.label;
     viewStatus = "ready";
     renderFlagControl();
   } catch (error) {
@@ -139,7 +149,7 @@ async function loadLabel(videoId: string, currentVisit: number, currentOperation
 
     viewStatus = "error";
     renderFlagControl();
-    console.error("[Shorts Flagger] Could not load label:", error);
+    console.error("[Shorts Flagger] Could not record Short:", error);
   }
 }
 
@@ -158,12 +168,12 @@ function checkCurrentShorts(): void {
     return;
   }
 
-  currentLabel = null;
+  currentLabel = "unflag";
   viewStatus = "loading";
   renderFlagControl();
   flagHost.style.display = "block";
   console.info("[Shorts Flagger] Current Shorts videoId:", nextVideoId);
-  void loadLabel(nextVideoId, visit, operation);
+  void observeCurrentShort(nextVideoId, visit, operation);
 }
 
 checkCurrentShorts();
