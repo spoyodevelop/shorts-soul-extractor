@@ -21,28 +21,29 @@ export function FlagControl({ videoId, label, status, onToggle, onRetry }: FlagC
     onToggle(videoId);
   }
 
-  let statusText = "현재: Unflag";
-  if (label === "flag") {
-    statusText = "현재: Flag";
-  }
+  let statusText = "클릭 또는 Z로 전환";
   if (status === "loading") {
     statusText = "Flag 상태 확인 중";
   } else if (status === "saving") {
     statusText = "변경 사항 저장 중";
   } else if (status === "error") {
-    statusText = "처리 실패 · 다시 시도";
+    statusText = "처리 실패 · 버튼을 눌러 재시도";
   }
 
-  let buttonText = label === "flag" ? "Unflag" : "Flag";
-  if (status === "error") {
-    buttonText = "다시 시도";
-  }
+  const buttonText = label === "flag" ? "Flag" : "Unflag";
+  const stateStyle = label === "flag" ? flaggedStyle : unflaggedStyle;
   const busy = status === "loading" || status === "saving";
 
   return (
     <div css={panelStyle}>
-      <button css={buttonStyle} type="button" onClick={handleClick} disabled={busy}>
-        {buttonText}
+      <button
+        css={[buttonStyle, stateStyle]}
+        type="button"
+        onClick={handleClick}
+        disabled={busy}
+        aria-pressed={label === "flag"}
+      >
+        {buttonText} · Z
       </button>
       <p css={statusStyle} role="status">
         {statusText}
@@ -62,16 +63,11 @@ const buttonStyle = css`
   padding: 10px 16px;
   border: 0;
   border-radius: 999px;
-  background: #d32f2f;
   color: white;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 2px 10px #0005;
-
-  &:hover {
-    background: #b71c1c;
-  }
 
   &:focus-visible {
     outline: 3px solid white;
@@ -81,6 +77,22 @@ const buttonStyle = css`
   &:disabled {
     cursor: wait;
     opacity: 0.65;
+  }
+`;
+
+const flaggedStyle = css`
+  background: #d32f2f;
+
+  &:hover {
+    background: #b71c1c;
+  }
+`;
+
+const unflaggedStyle = css`
+  background: #2e7d32;
+
+  &:hover {
+    background: #1b5e20;
   }
 `;
 
