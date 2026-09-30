@@ -1,30 +1,41 @@
 import { css } from "@emotion/react";
-import { useState } from "react";
+import type { Label } from "../shared/labels";
+
+export type LabelViewStatus = "loading" | "ready" | "saving" | "error";
 
 type FlagControlProps = {
   videoId: string;
-  onFlag: (videoId: string) => boolean;
+  label: Label | null;
+  status: LabelViewStatus;
+  onFlag: (videoId: string) => void;
 };
 
-export function FlagControl({ videoId, onFlag }: FlagControlProps) {
-  const [requested, setRequested] = useState(false);
-
+export function FlagControl({ videoId, label, status, onFlag }: FlagControlProps) {
   function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
-    if (onFlag(videoId)) {
-      setRequested(true);
-    }
+    onFlag(videoId);
+  }
+
+  let statusText = "라벨 없음";
+  if (status === "loading") {
+    statusText = "라벨 확인 중";
+  } else if (status === "saving") {
+    statusText = "Flag 저장 중";
+  } else if (status === "error") {
+    statusText = "라벨 처리 실패 · Flag로 재시도";
+  } else if (label === "flag") {
+    statusText = "Flag 저장됨";
+  } else if (label === "unflag") {
+    statusText = "Unflag 저장됨";
   }
 
   return (
     <div css={panelStyle}>
-      <button css={buttonStyle} type="button" onClick={handleClick}>
+      <button css={buttonStyle} type="button" onClick={handleClick} disabled={status === "saving"}>
         Flag
       </button>
       <p css={statusStyle} role="status">
-        {requested
-          ? "Flag 입력됨 · 아직 저장되지 않음"
-          : "아직 저장되지 않습니다"}
+        {statusText}
       </p>
     </div>
   );
@@ -55,6 +66,11 @@ const buttonStyle = css`
   &:focus-visible {
     outline: 3px solid white;
     outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: wait;
+    opacity: 0.65;
   }
 `;
 

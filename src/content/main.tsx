@@ -1,7 +1,8 @@
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { createRoot } from "react-dom/client";
-import { FlagControl } from "./FlagControl";
+import { FlagControl, type LabelViewStatus } from "./FlagControl";
+import type { Label, LabeledShort, LabelRequest, LabelResponse } from "../shared/labels";
 
 const SHORTS_PATH = /^\/shorts\/([A-Za-z0-9_-]+)\/?$/;
 
@@ -30,22 +31,99 @@ function getCurrentShortsVideoId(): string | null {
   return match[1];
 }
 
-function requestFlag(videoId: string): boolean {
-  if (getCurrentShortsVideoId() !== videoId) {
-    checkCurrentShorts();
-    return false;
+async function sendLabelRequest(request: LabelRequest): Promise<LabeledShort | null> {
+  const response = (await chrome.runtime.sendMessage(request)) as LabelResponse | undefined;
+  if (response === undefined) {
+    throw new Error("No response from label storage");
   }
-
-  console.info("[Shorts Flagger] Flag requested (not saved):", {
-    videoId,
-    url: window.location.href,
-    flaggedAt: new Date().toISOString(),
-  });
-  return true;
+  if (!response.ok) {
+    throw new Error(response.error);
+  }
+  return response.record;
 }
 
 let currentVideoId: string | null = null;
+let currentLabel: Label | null = null;
+let viewStatus: LabelViewStatus = "loading";
+let operation = 0;
 let visit = 0;
+
+function renderFlagControl(): void {
+  if (currentVideoId === null) {
+    root.render(null);
+    return;
+  }
+
+  root.render(
+    <CacheProvider value={emotionCache}>
+      <FlagControl
+        key={`${currentVideoId}:${visit}`}
+        videoId={currentVideoId}
+        label={currentLabel}
+        status={viewStatus}
+        onFlag={requestFlag}
+      />
+    </CacheProvider>,
+  );
+}
+
+async function requestFlag(videoId: string): Promise<void> {
+  if (getCurrentShortsVideoId() !== videoId) {
+    checkCurrentShorts();
+    return;
+  }
+
+  const currentOperation = ++operation;
+  const currentVisit = visit;
+  viewStatus = "saving";
+  renderFlagControl();
+
+  try {
+    const record = await sendLabelRequest({
+      type: "labels:save",
+      record: { videoId, label: "flag", labeledAt: Date.now() },
+    });
+    if (record === null) {
+      throw new Error("Label storage returned no record");
+    }
+    if (currentVisit !== visit || currentOperation !== operation) {
+      return;
+    }
+
+    currentLabel = record.label;
+    viewStatus = "ready";
+    renderFlagControl();
+  } catch (error) {
+    if (currentVisit !== visit || currentOperation !== operation) {
+      return;
+    }
+
+    viewStatus = "error";
+    renderFlagControl();
+    console.error("[Shorts Flagger] Could not save label:", error);
+  }
+}
+
+async function loadLabel(videoId: string, currentVisit: number, currentOperation: number): Promise<void> {
+  try {
+    const record = await sendLabelRequest({ type: "labels:get", videoId });
+    if (currentVisit !== visit || currentOperation !== operation) {
+      return;
+    }
+
+    currentLabel = record?.label ?? null;
+    viewStatus = "ready";
+    renderFlagControl();
+  } catch (error) {
+    if (currentVisit !== visit || currentOperation !== operation) {
+      return;
+    }
+
+    viewStatus = "error";
+    renderFlagControl();
+    console.error("[Shorts Flagger] Could not load label:", error);
+  }
+}
 
 function checkCurrentShorts(): void {
   const nextVideoId = getCurrentShortsVideoId();
@@ -55,19 +133,19 @@ function checkCurrentShorts(): void {
 
   currentVideoId = nextVideoId;
   visit += 1;
+  operation += 1;
   if (nextVideoId === null) {
     flagHost.style.display = "none";
-    root.render(null);
+    renderFlagControl();
     return;
   }
 
-  root.render(
-    <CacheProvider value={emotionCache}>
-      <FlagControl key={`${nextVideoId}:${visit}`} videoId={nextVideoId} onFlag={requestFlag} />
-    </CacheProvider>,
-  );
+  currentLabel = null;
+  viewStatus = "loading";
+  renderFlagControl();
   flagHost.style.display = "block";
   console.info("[Shorts Flagger] Current Shorts videoId:", nextVideoId);
+  void loadLabel(nextVideoId, visit, operation);
 }
 
 checkCurrentShorts();
