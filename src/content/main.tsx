@@ -2,6 +2,7 @@ import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 import { createRoot } from "react-dom/client";
 import { FlagControl, type LabelViewStatus } from "./FlagControl";
+import { nextLabel } from "../shared/labels";
 import type { Label, LabeledShort, LabelRequest, LabelResponse } from "../shared/labels";
 
 const SHORTS_PATH = /^\/shorts\/([A-Za-z0-9_-]+)\/?$/;
@@ -61,18 +62,23 @@ function renderFlagControl(): void {
         videoId={currentVideoId}
         label={currentLabel}
         status={viewStatus}
-        onFlag={requestFlag}
+        onToggle={requestToggle}
+        onRetry={retryLoadLabel}
       />
     </CacheProvider>,
   );
 }
 
-async function requestFlag(videoId: string): Promise<void> {
+async function requestToggle(videoId: string): Promise<void> {
   if (getCurrentShortsVideoId() !== videoId) {
     checkCurrentShorts();
     return;
   }
+  if (viewStatus !== "ready") {
+    return;
+  }
 
+  const label = nextLabel(currentLabel);
   const currentOperation = ++operation;
   const currentVisit = visit;
   viewStatus = "saving";
@@ -81,7 +87,7 @@ async function requestFlag(videoId: string): Promise<void> {
   try {
     const record = await sendLabelRequest({
       type: "labels:save",
-      record: { videoId, label: "flag", labeledAt: Date.now() },
+      record: { videoId, label, labeledAt: Date.now() },
     });
     if (record === null) {
       throw new Error("Label storage returned no record");
@@ -102,6 +108,18 @@ async function requestFlag(videoId: string): Promise<void> {
     renderFlagControl();
     console.error("[Shorts Flagger] Could not save label:", error);
   }
+}
+
+function retryLoadLabel(videoId: string): void {
+  if (getCurrentShortsVideoId() !== videoId) {
+    checkCurrentShorts();
+    return;
+  }
+
+  const currentOperation = ++operation;
+  viewStatus = "loading";
+  renderFlagControl();
+  void loadLabel(videoId, visit, currentOperation);
 }
 
 async function loadLabel(videoId: string, currentVisit: number, currentOperation: number): Promise<void> {
@@ -151,6 +169,29 @@ function checkCurrentShorts(): void {
 checkCurrentShorts();
 window.addEventListener("popstate", checkCurrentShorts);
 window.addEventListener("yt-navigate-finish", checkCurrentShorts);
+
+window.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() !== "z" || event.repeat || event.isComposing || event.defaultPrevented) {
+    return;
+  }
+
+  const hasModifier = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+  const typingInField = event.composedPath().some((target) => {
+    if (!(target instanceof HTMLElement)) {
+      return false;
+    }
+    return target.isContentEditable || target.matches("input, textarea, select");
+  });
+  if (hasModifier || typingInField) {
+    return;
+  }
+  if (currentVideoId === null || viewStatus !== "ready") {
+    return;
+  }
+
+  event.preventDefault();
+  void requestToggle(currentVideoId);
+}, true);
 
 // YouTube's internal navigation events are not a stable API. This also catches URL
 // changes from Shorts swipes or navigation paths that do not emit those events.

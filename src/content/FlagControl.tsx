@@ -7,32 +7,44 @@ type FlagControlProps = {
   videoId: string;
   label: Label | null;
   status: LabelViewStatus;
-  onFlag: (videoId: string) => void;
+  onToggle: (videoId: string) => void;
+  onRetry: (videoId: string) => void;
 };
 
-export function FlagControl({ videoId, label, status, onFlag }: FlagControlProps) {
+export function FlagControl({ videoId, label, status, onToggle, onRetry }: FlagControlProps) {
   function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
-    onFlag(videoId);
+    if (status === "error") {
+      onRetry(videoId);
+      return;
+    }
+    onToggle(videoId);
   }
 
-  let statusText = "라벨 없음";
-  if (status === "loading") {
-    statusText = "라벨 확인 중";
-  } else if (status === "saving") {
-    statusText = "Flag 저장 중";
-  } else if (status === "error") {
-    statusText = "라벨 처리 실패 · Flag로 재시도";
-  } else if (label === "flag") {
-    statusText = "Flag 저장됨";
+  let statusText = "현재: 라벨 없음";
+  if (label === "flag") {
+    statusText = "현재: Flag";
   } else if (label === "unflag") {
-    statusText = "Unflag 저장됨";
+    statusText = "현재: Unflag";
   }
+  if (status === "loading") {
+    statusText = "Flag 상태 확인 중";
+  } else if (status === "saving") {
+    statusText = "변경 사항 저장 중";
+  } else if (status === "error") {
+    statusText = "처리 실패 · 다시 시도";
+  }
+
+  let buttonText = label === "flag" ? "Unflag" : "Flag";
+  if (status === "error") {
+    buttonText = "다시 시도";
+  }
+  const busy = status === "loading" || status === "saving";
 
   return (
     <div css={panelStyle}>
-      <button css={buttonStyle} type="button" onClick={handleClick} disabled={status === "saving"}>
-        Flag
+      <button css={buttonStyle} type="button" onClick={handleClick} disabled={busy}>
+        {buttonText}
       </button>
       <p css={statusStyle} role="status">
         {statusText}

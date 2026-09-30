@@ -1,5 +1,12 @@
 export type Label = "flag" | "unflag";
 
+export function nextLabel(current: Label | null): Label {
+  if (current === "flag") {
+    return "unflag";
+  }
+  return "flag";
+}
+
 export type LabeledShort = {
   videoId: string;
   label: Label;

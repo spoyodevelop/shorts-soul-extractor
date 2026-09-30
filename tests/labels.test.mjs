@@ -4,6 +4,13 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { build } from "esbuild";
 import { getLabel, saveLabel } from "../src/background/labels.ts";
+import { nextLabel } from "../src/shared/labels.ts";
+
+test("toggle advances from unlabeled through Flag and Unflag", () => {
+  assert.equal(nextLabel(null), "flag");
+  assert.equal(nextLabel("flag"), "unflag");
+  assert.equal(nextLabel("unflag"), "flag");
+});
 
 test("stores only the latest explicit label for each video", async () => {
   assert.equal(await getLabel("video-one"), null);
@@ -19,6 +26,10 @@ test("stores only the latest explicit label for each video", async () => {
   await saveLabel(unflagged);
   assert.deepEqual(await getLabel("video-one"), unflagged);
   assert.deepEqual(await getLabel("video-two"), other);
+
+  const flaggedAgain = { videoId: "video-one", label: "flag", labeledAt: 250 };
+  await saveLabel(flaggedAgain);
+  assert.deepEqual(await getLabel("video-one"), flaggedAgain);
 });
 
 test("background messages confirm committed labels and reject invalid input", async () => {
