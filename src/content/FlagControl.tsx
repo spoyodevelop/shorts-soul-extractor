@@ -6,8 +6,33 @@ type FlagControlProps = {
   onFlag: (videoId: string) => boolean;
 };
 
+export function FlagControl({ videoId, onFlag }: FlagControlProps) {
+  const [requested, setRequested] = useState(false);
+
+  function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    if (onFlag(videoId)) {
+      setRequested(true);
+    }
+  }
+
+  return (
+    <div css={panelStyle}>
+      <button css={buttonStyle} type="button" onClick={handleClick}>
+        Flag
+      </button>
+      <p css={statusStyle} role="status">
+        {requested
+          ? "Flag 입력됨 · 아직 저장되지 않음"
+          : "아직 저장되지 않습니다"}
+      </p>
+    </div>
+  );
+}
 const panelStyle = css`
-  font: 14px/1.4 system-ui, sans-serif;
+  font:
+    14px/1.4 system-ui,
+    sans-serif;
 `;
 
 const buttonStyle = css`
@@ -41,25 +66,3 @@ const statusStyle = css`
   color: white;
   text-align: center;
 `;
-
-export function FlagControl({ videoId, onFlag }: FlagControlProps) {
-  const [requested, setRequested] = useState(false);
-
-  function handleClick(event: React.MouseEvent<HTMLButtonElement>) {
-    event.stopPropagation();
-    if (onFlag(videoId)) {
-      setRequested(true);
-    }
-  }
-
-  return (
-    <div css={panelStyle}>
-      <button css={buttonStyle} type="button" onClick={handleClick}>
-        Flag
-      </button>
-      <p css={statusStyle} role="status">
-        {requested ? "Flag 입력됨 · 아직 저장되지 않음" : "아직 저장되지 않습니다"}
-      </p>
-    </div>
-  );
-}
