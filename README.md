@@ -41,7 +41,7 @@ npm run dev
 사용자가 YouTube Shorts를 보다가 현재 영상을 직접 Flag하면, 판단 기록을 먼저 로컬에 저장하고 자막·메타데이터 수집 및 분석은 후속 작업으로 처리하는 MVP를 만듭니다.
 
 1. **현재 Shorts 식별 (구현):** `/shorts/:id` 경로와 화면 전환을 감지하고 현재 영상의 `videoId`를 추출합니다.
-2. **수동 Flag 입력:** 독립 overlay 또는 Shadow DOM 버튼과 `F` 단축키를 제공합니다. 입력 중인 텍스트 필드에서는 단축키가 작동하지 않도록 합니다.
+2. **수동 Flag 입력:** 독립 overlay 또는 Shadow DOM 버튼을 제공합니다. 단축키는 YouTube와 충돌하지 않는 조합을 확인한 뒤 추가하며, 입력 중인 텍스트 필드에서는 작동하지 않도록 합니다.
 3. **즉시 저장:** Flag 시점의 `videoId`, URL, `flaggedAt`과 `pending` 상태를 IndexedDB에 저장합니다. 저장 성공 여부를 사용자에게 알려줍니다.
 4. **후속 수집 큐:** 저장된 항목에서 transcript와 metadata 수집을 시도합니다. 실패 기록과 재시도 상태를 남겨 Flag 판단이 사라지지 않게 합니다.
 5. **외부 연동 경계:** transcript provider 인터페이스를 두고 `youtubei.js` 등 적절한 라이브러리가 MV3 환경에서 동작하는지 검증한 뒤 연결합니다. Jev 분석과 YouTube의 실제 ‘관심 없음’ 동작은 우선 인터페이스와 mock으로 둡니다.
