@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Shorts Flagger (Development)",
+  "version": "0.1.0",
+  "description": "Development scaffold for manually labeling YouTube Shorts.",
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/shorts/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
